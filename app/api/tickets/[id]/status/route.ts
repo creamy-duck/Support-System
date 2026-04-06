@@ -7,8 +7,9 @@ import { handleApiError } from '@/lib/errors';
 
 const ticketService = new TicketService();
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const user = session.user as { id: string; role: string };
@@ -20,7 +21,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         { status: 400 },
       );
     }
-    const ticket = await ticketService.updateStatus(params.id, parsed.data.status, user.id, user.role);
+    const ticket = await ticketService.updateStatus(id, parsed.data.status, user.id, user.role);
     return NextResponse.json({ ticket });
   } catch (error) {
     const { message, statusCode } = handleApiError(error);

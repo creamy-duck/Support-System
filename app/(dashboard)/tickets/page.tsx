@@ -18,19 +18,20 @@ interface SearchParams {
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
+  const resolvedSearchParams = await searchParams;
   const session = await getServerSession(authOptions);
   const user = session!.user as { id: string; role: string };
 
   const ticketService = new TicketService();
 
   const filters = {
-    status: searchParams.status as TicketStatus | undefined,
-    priority: searchParams.priority as TicketPriority | undefined,
-    category: searchParams.category as TicketCategory | undefined,
-    search: searchParams.search,
-    page: searchParams.page ? parseInt(searchParams.page) : 1,
+    status: resolvedSearchParams.status as TicketStatus | undefined,
+    priority: resolvedSearchParams.priority as TicketPriority | undefined,
+    category: resolvedSearchParams.category as TicketCategory | undefined,
+    search: resolvedSearchParams.search,
+    page: resolvedSearchParams.page ? parseInt(resolvedSearchParams.page) : 1,
     limit: 20,
   };
 

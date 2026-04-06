@@ -8,8 +8,9 @@ import { handleApiError } from '@/lib/errors';
 const userService = new UserService();
 const UpdateRoleSchema = z.object({ role: z.enum(['user', 'support', 'admin']) });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const requester = session.user as { id: string; role: string };
@@ -18,7 +19,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
     }
-    const updated = await userService.updateRole(params.id, parsed.data.role, requester.role);
+    const updated = await userService.updateRole(id, parsed.data.role, requester.role);
     return NextResponse.json({ user: updated });
   } catch (error) {
     const { message, statusCode } = handleApiError(error);

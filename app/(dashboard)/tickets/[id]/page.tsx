@@ -15,10 +15,11 @@ import { ITicket, ITicketReply, IAuditLog } from '@/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function TicketDetailPage({ params }: PageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
   const user = session.user as { id: string; role: string };
@@ -29,14 +30,14 @@ export default async function TicketDetailPage({ params }: PageProps) {
 
   let ticket;
   try {
-    ticket = await ticketService.getTicket(params.id, user.id, user.role);
+    ticket = await ticketService.getTicket(id, user.id, user.role);
   } catch {
     notFound();
   }
 
   await connectDB();
 
-  const repliesQuery: Record<string, unknown> = { ticket: params.id };
+  const repliesQuery: Record<string, unknown> = { ticket: id };
   if (user.role === 'user') repliesQuery.isInternal = false;
 
   const [replies, auditLogs, supportUsers] = await Promise.all([
@@ -44,7 +45,7 @@ export default async function TicketDetailPage({ params }: PageProps) {
       .populate('author', 'name email role')
       .sort({ createdAt: 1 })
       .lean(),
-    user.role !== 'user' ? auditRepo.findByTicket(params.id) : Promise.resolve([]),
+    user.role !== 'user' ? auditRepo.findByTicket(id) : Promise.resolve([]),
     user.role !== 'user' ? userService.getSupportUsers() : Promise.resolve([]),
   ]);
 
@@ -82,7 +83,7 @@ export default async function TicketDetailPage({ params }: PageProps) {
           <h2 className="text-lg font-semibold text-gray-900">Add Reply</h2>
         </CardHeader>
         <CardContent>
-          <ReplyForm ticketId={params.id} />
+          <ReplyForm ticketId={id} />
         </CardContent>
       </Card>
 

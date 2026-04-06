@@ -7,17 +7,18 @@ import { Navbar } from '@/components/layout/Navbar';
 import Link from 'next/link';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function AdminUserPage({ params }: PageProps) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
   const sessionUser = session.user as { id: string; role: string };
   if (sessionUser.role !== 'admin') redirect('/dashboard');
 
   const userRepo = new UserRepository();
-  const user = await userRepo.findById(params.id);
+  const user = await userRepo.findById(id);
   if (!user) redirect('/admin');
 
   const u = user as unknown as { _id: { toString(): string }; name: string; email: string; role: string; createdAt: Date };

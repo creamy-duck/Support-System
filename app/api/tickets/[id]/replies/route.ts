@@ -10,18 +10,19 @@ import { handleApiError } from '@/lib/errors';
 
 const auditRepo = new AuditLogRepository();
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const user = session.user as { id: string; role: string };
     await connectDB();
-    const ticket = await Ticket.findById(params.id);
+    const ticket = await Ticket.findById(id);
     if (!ticket) return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     if (user.role === 'user' && ticket.createdBy.toString() !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    const query: Record<string, unknown> = { ticket: params.id };
+    const query: Record<string, unknown> = { ticket: id };
     if (user.role === 'user') query.isInternal = false;
     const replies = await TicketReply.find(query)
       .populate('author', 'name email role')
@@ -34,13 +35,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const user = session.user as { id: string; role: string };
     await connectDB();
-    const ticket = await Ticket.findById(params.id);
+    const ticket = await Ticket.findById(id);
     if (!ticket) return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     if (user.role === 'user' && ticket.createdBy.toString() !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -57,12 +59,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const reply = await TicketReply.create({
-      ticket: params.id,
+      ticket: id,
       author: user.id,
       ...parsed.data,
     });
     await auditRepo.create({
-      ticket: params.id,
+      ticket: id,
       performedBy: user.id,
       action: 'reply_added',
       newValue: parsed.data.isInternal ? 'internal' : 'public',
